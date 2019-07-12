@@ -14,7 +14,7 @@ namespace SharePointPnP.PowerShell.Commands.Workflows
     [CmdletHelp("Starts a workflow instance on a list item",
         Category = CmdletHelpCategory.Workflows)]
     [CmdletExample(
-        Code = @"PS:> Start-PnPWorkflowInstance -Name 'WorkflowName' -ListItem $item ", 
+        Code = @"PS:> Start-PnPWorkflowInstance -Name 'WorkflowName' -ListItem $item ",
         Remarks = "Starts a workflow instance on the specified list item",
         SortOrder = 1)]
     [CmdletExample(
@@ -51,15 +51,17 @@ namespace SharePointPnP.PowerShell.Commands.Workflows
             {
                 throw new PSArgumentException("List Item is required");
             }
+
+            var subscription = Subscription.GetWorkflowSubscription(SelectedWeb)
+                ?? throw new PSArgumentException($"No workflow subscription found for '{Subscription}'", nameof(Subscription));
+
+            var inputParameters = new Dictionary<string, object>();
+
             WorkflowServicesManager workflowServicesManager = new WorkflowServicesManager(ClientContext, SelectedWeb);
             WorkflowInstanceService instanceService = workflowServicesManager.GetWorkflowInstanceService();
 
-            if (Subscription.Subscription != null)
-            {
-                var inputParameters = new Dictionary<string, object>();
-                instanceService.StartWorkflowOnListItem(Subscription.Subscription, ListItemID, inputParameters);
-                ClientContext.ExecuteQueryRetry();
-            }
+            instanceService.StartWorkflowOnListItem(subscription, ListItemID, inputParameters);
+            ClientContext.ExecuteQueryRetry();
         }
     }
 }
