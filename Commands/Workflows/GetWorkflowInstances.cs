@@ -9,6 +9,7 @@ using Microsoft.SharePoint.Client.WorkflowServices;
 namespace SharePointPnP.PowerShell.Commands.Workflows
 {
     [Cmdlet(VerbsCommon.Get, "PnPWorkflowInstance")]
+    [OutputType(typeof(WorkflowInstance))]
     [CmdletHelp("Get workflow instances",
         "Gets all workflow instances",
         Category = CmdletHelpCategory.Workflows)]

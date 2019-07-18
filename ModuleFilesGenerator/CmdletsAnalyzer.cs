@@ -77,6 +77,13 @@ namespace SharePointPnP.PowerShell.ModuleFilesGenerator
 #endif
                     }
 
+                    if (attribute is OutputTypeAttribute outputTypeAttribute)
+                    {
+                        // TODO: what to do about multiple return types
+                        // TODO: what to do about differing return types between parameter sets
+                        cmdletInfo.OutputType = outputTypeAttribute.Type.FirstOrDefault()?.Type;
+                    }
+
                     var helpAttribute = attribute as CmdletHelpAttribute;
                     if (helpAttribute != null)
                     {

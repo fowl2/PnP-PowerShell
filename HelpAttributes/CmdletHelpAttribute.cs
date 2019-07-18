@@ -33,8 +33,9 @@ namespace SharePointPnP.PowerShell.CmdletHelpAttributes
         /// <summary>
         /// The type of the object it returns. If specified this information will be listed in the help
         /// </summary>
+        [Obsolete("Use System.Management.Automation.OutputType attribute instead.")]
         public Type OutputType { get; set; }
-
+        
         /// <summary>
         /// A description describing what will be returned
         /// </summary>

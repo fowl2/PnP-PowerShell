@@ -7,9 +7,9 @@ using SharePointPnP.PowerShell.CmdletHelpAttributes;
 namespace SharePointPnP.PowerShell.Commands.Workflows
 {
     [Cmdlet(VerbsCommon.Add, "PnPWorkflowDefinition")]
+    [OutputType(typeof(Guid))]
     [CmdletHelp("Adds a workflow definition",
         Category = CmdletHelpCategory.Workflows,
-        OutputType=typeof(Guid),
         OutputTypeDescription = "Returns the Id of the workflow definition")]
     [CmdletExample(
         Code = @"PS:> Add-PnPWorkflowDefinition -Definition $wfdef", 
