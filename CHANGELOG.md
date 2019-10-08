@@ -5,6 +5,74 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [3.14.1910.0]
+
+### Added
+
+- Added Set-PnPFolderPermission to set specific folder permissions
+- ConvertTo-PnPClientSidePage: Added support for keeping the source page Author, (Editor), Created and Modified page properties (only when source page lives in SPO) (KeepPageCreationModificationInformation parameter)
+- ConvertTo-PnPClientSidePage: Added support for posting the created page as news (PostAsNews parameter)
+- ConvertTo-PnPClientSidePage: Added support for modernizing blog pages (BlogPage parameter)
+- ConvertTo-PnPClientSidePage: Added option to populate the author in the modern page header based upon the author of the source page (only when source page lives in SPO) (SetAuthorInPageHeader parameter)
+- Export-ClientSidePageMappings: Added logging support (#2272)
+
+### Changed
+
+- Add-PnPClientSideWebPart now also works for SP2019
+- Added -List parameter to Get-PnPFolder to retrieve all folders in a list
+- Added owner paramter to New-PnPSite when create Communications site
+- Fixed issues after static code analysis
+- Added -ThumbnailUrl parameter to Set-PnPClientSidePage
+- ConvertTo-PnPClientSidePage: AddTableListImageAsImageWebPart default set to true to align with similar change in the page transformation framework
+- ConvertTo-PnPClientSidePage: moved log flushing to finally block to ensure it happens in case of something unexpected
+
+### Contributors
+
+- Garry Trinder [garrytrinder]
+- Koen Zomers [KoenZomers]
+- Gautam Sheth [gautamdsheth]
+- Giacomo Pozzoni [jackpoz]
+- Paul Bullock [pkbullock]
+
+## [3.13.1909.0]
+
+### Added
+
+### Changed
+
+- Added -Label parameter to Add-PnPList and Set-PnPListItem to allow setting a retention label
+- ConvertTo-PnPClientSidePage: Added support for skipping the default URL rewriting while still applying any custom URL rewriting if specified (SkipDefaultUrlRewriting parameter)
+- ConvertTo-PnPClientSidePage: Added support reverting to the pre September 2019 behaviour for images insides tables/lists. As of September 2019 these images are not created anymore as additional separate image web part since the modern text editor is not dropping the embedded images anymore on edit (AddTableListImageAsImageWebPart parameter)
+- Get-PnPSearchCrawlLog: Added switch to show raw crawl log data, as data can change in the back-end. Fixed to show log message.
+- Set-PnPTenant: Added switch to set disabled 1st party web parts
+
+### Contributors
+
+- Dan Cecil [danielcecil]
+- Koen zomers [KoenZomers]
+
+## [3.12.1908.0]
+
+### Added
+- Added -ResetRoleInheritance to Set-PnPList
+- Documentation updates
+- Added a TemplateId parameter to Apply-PnPProvisioningTemplate to allow to apply a specific template in case multiple templates exist in a single file.
+
+### Changed
+
+- Fixed potential issue when using -CurrentCredentials with Connect-PnPOnline in an on-premises context
+- Fixed bug in Set-PnPListItem when using SystemUpdate and setting a content type.
+- Grant-PnPTenantServicePrincipalPermission now handles multi-language environments where the Tenant App Catalog is in a different language than English.
+- Save-PnPProvisioningTemplate, if saving an instance to a PnP file, will now store referenced files etc in the PnP file.
+
+### Contributors
+
+- Lars Fernhomberg [lafe]
+- Chris O'Connor [kachihro]
+- Koen Zomers [KoenZomers]
+- Gautam Sheth [gautamdsheth]
+- Andres Mariano Gorzelany [get-itips]
+
 ## [3.11.1907.0]
 
 ### Added
@@ -15,9 +83,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 - ConvertTo-PnPClientSidePage: Added support for specifying a custom URL mapping file (UrlMappingFile parameter)
 - Get-PnPField: Return managed metadata fields as TaxonomyField instead of generic Field (#2130)
+- Submit-PnPSearchQuery: Added alias Invoke-PnPSearchQuery for semantic aligning the verbs (#2168)
+- Copy-PnPFile: Bugfix (#2103 #2148)
 
 ### Contributors
-
+- Andi Krüger [andikrueger]
 
 ## [3.10.1906.0]
 
