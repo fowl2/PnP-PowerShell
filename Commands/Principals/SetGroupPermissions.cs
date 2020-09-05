@@ -37,7 +37,8 @@ namespace PnP.PowerShell.Commands.Principals
         public GroupPipeBind Identity = new GroupPipeBind();
 
         [Parameter(Mandatory = false, HelpMessage = "The list to apply the command to.")]
-        public ListPipeBind List = new ListPipeBind();
+        [ValidateNotNullOrEmpty]
+        public ListPipeBind List;
 
         [Parameter(Mandatory = false, HelpMessage = "Name of the permission set to add to this SharePoint group")]
         public string[] AddRole = null;
@@ -48,16 +49,8 @@ namespace PnP.PowerShell.Commands.Principals
         protected override void ExecuteCmdlet()
         {
             var group = Identity.GetGroup(SelectedWeb);
-            
-            List list = List.GetList(SelectedWeb);
-            if (list == null && !string.IsNullOrEmpty(List.Title))
-            {
-                throw new Exception($"List with Title {List.Title} not found");
-            }
-            else if (list == null && List.Id != Guid.Empty )
-            {
-                throw new Exception($"List with Id {List.Id} not found");
-            }
+
+            List list = List.GetListOrThrow(nameof(List), SelectedWeb);
 
             if (AddRole != null)
             {

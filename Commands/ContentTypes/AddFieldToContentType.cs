@@ -1,17 +1,19 @@
 ﻿using System;
 using System.Management.Automation;
+
 using Microsoft.SharePoint.Client;
+
 using PnP.PowerShell.CmdletHelpAttributes;
 using PnP.PowerShell.Commands.Base.PipeBinds;
 
 namespace PnP.PowerShell.Commands.ContentTypes
 {
     [Cmdlet(VerbsCommon.Add, "PnPFieldToContentType")]
-    [CmdletHelp("Adds an existing site column to a content type", 
+    [CmdletHelp("Adds an existing site column to a content type",
         Category = CmdletHelpCategory.ContentTypes)]
     [CmdletExample(
         Code = @"PS:> Add-PnPFieldToContentType -Field ""Project_Name"" -ContentType ""Project Document""",
-        Remarks = @"This will add an existing site column with an internal name of ""Project_Name"" to a content type called ""Project Document""", 
+        Remarks = @"This will add an existing site column with an internal name of ""Project_Name"" to a content type called ""Project Document""",
         SortOrder = 1)]
     public class AddFieldToContentType : PnPWebCmdlet
     {
@@ -19,6 +21,7 @@ namespace PnP.PowerShell.Commands.ContentTypes
         public FieldPipeBind Field;
 
         [Parameter(Mandatory = true, HelpMessage = "Specifies which content type a field needs to be added to")]
+        [ValidateNotNullOrEmpty]
         public ContentTypePipeBind ContentType;
 
         [Parameter(Mandatory = false, HelpMessage = "Specifies whether the field is required or not")]
@@ -43,36 +46,15 @@ namespace PnP.PowerShell.Commands.ContentTypes
                 ClientContext.Load(field);
                 ClientContext.ExecuteQueryRetry();
             }
-            if (field != null)
-            {
-                if (ContentType.ContentType != null)
-                {
-                    SelectedWeb.AddFieldToContentType(ContentType.ContentType, field, Required, Hidden);
-                }
-                else
-                {
-                    ContentType ct;
-                    if (!string.IsNullOrEmpty(ContentType.Id))
-                    {
-                        ct = SelectedWeb.GetContentTypeById(ContentType.Id);
-                      
-                    }
-                    else
-                    {
-                        ct = SelectedWeb.GetContentTypeByName(ContentType.Name);
-                    }
-                    if (ct != null)
-                    {
-                        SelectedWeb.AddFieldToContentType(ct, field, Required, Hidden);
-                    }
-                }
-            }
-            else
-            {
+
+            if (field is null)
                 throw new Exception("Field not found");
+
+            var ct = ContentType.GetContentTypeOrWarn(this, SelectedWeb);
+            if (ct != null)
+            {
+                SelectedWeb.AddFieldToContentType(ct, field, Required, Hidden);
             }
         }
-
-
     }
 }

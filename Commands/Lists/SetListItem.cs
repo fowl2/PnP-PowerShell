@@ -3,8 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Management.Automation;
+
 using Microsoft.SharePoint.Client;
 using Microsoft.SharePoint.Client.Taxonomy;
+
 using PnP.PowerShell.CmdletHelpAttributes;
 using PnP.PowerShell.Commands.Base.PipeBinds;
 using PnP.PowerShell.Commands.Enums;
@@ -37,12 +39,15 @@ namespace PnP.PowerShell.Commands.Lists
     public class SetListItem : PnPWebCmdlet
     {
         [Parameter(Mandatory = true, ValueFromPipeline = true, Position = 0, HelpMessage = "The ID, Title or Url of the list.")]
+        [ValidateNotNullOrEmpty]
         public ListPipeBind List;
 
         [Parameter(Mandatory = true, ValueFromPipeline = true, HelpMessage = "The ID of the listitem, or actual ListItem object")]
+        [ValidateNotNullOrEmpty]
         public ListItemPipeBind Identity;
 
         [Parameter(Mandatory = false, HelpMessage = "Specify either the name, ID or an actual content type")]
+        [ValidateNotNullOrEmpty]
         public ContentTypePipeBind ContentType;
 
         [Parameter(Mandatory = false, HelpMessage = "Use the internal names of the fields when specifying field names." +
@@ -72,42 +77,23 @@ namespace PnP.PowerShell.Commands.Lists
         public SwitchParameter SystemUpdate;
 
         [Parameter(Mandatory = false, HelpMessage = "The name of the retention label.")]
-        public String Label;
+        public string Label;
 #endif
 
         protected override void ExecuteCmdlet()
         {
-            List list = null;
-            if (List != null)
-            {
-                list = List.GetList(SelectedWeb);
-            }
+            var list = List.GetListOrWarn(this, SelectedWeb);
             if (list != null)
             {
                 var item = Identity.GetListItem(list);
 
                 if (ContentType != null)
                 {
-                    ContentType ct = null;
-                    if (ContentType.ContentType == null)
+                    var ctId = ContentType.GetIdOrWarn(this, list);
+
+                    if (ctId != null)
                     {
-                        if (ContentType.Id != null)
-                        {
-                            ct = SelectedWeb.GetContentTypeById(ContentType.Id, true);
-                        }
-                        else if (ContentType.Name != null)
-                        {
-                            ct = SelectedWeb.GetContentTypeByName(ContentType.Name, true);
-                        }
-                    }
-                    else
-                    {
-                        ct = ContentType.ContentType;
-                    }
-                    if (ct != null)
-                    {
-                        ct.EnsureProperty(w => w.StringId);
-                        item["ContentTypeId"] = ct.StringId;
+                        item["ContentTypeId"] = ctId;
 #if !ONPREMISES
                         if (SystemUpdate.IsPresent)
                         {
@@ -161,7 +147,7 @@ namespace PnP.PowerShell.Commands.Lists
 
                     var tag = tags.Where(t => t.TagName == Label).FirstOrDefault();
 
-                    if(tag != null)
+                    if (tag != null)
                     {
                         try
                         {
@@ -172,7 +158,8 @@ namespace PnP.PowerShell.Commands.Lists
                         {
                             WriteWarning(error.Message.ToString());
                         }
-                    } else
+                    }
+                    else
                     {
                         WriteWarning("Can not find compliance tag with value: " + Label);
                     }

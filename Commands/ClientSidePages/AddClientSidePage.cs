@@ -1,8 +1,11 @@
 ﻿#if !SP2013 && !SP2016
 using Microsoft.SharePoint.Client;
+
 using OfficeDevPnP.Core.Pages;
+
 using PnP.PowerShell.CmdletHelpAttributes;
 using PnP.PowerShell.Commands.Base.PipeBinds;
+
 using System;
 using System.Management.Automation;
 
@@ -45,6 +48,7 @@ namespace PnP.PowerShell.Commands.ClientSidePages
         public ClientSidePagePromoteType PromoteAs = ClientSidePagePromoteType.None;
 
         [Parameter(Mandatory = false, HelpMessage = "Specify either the name, ID or an actual content type.")]
+        [ValidateNotNullOrEmpty]
         public ContentTypePipeBind ContentType;
 
         [Parameter(Mandatory = false, HelpMessage = "Enables or Disables the comments on the page")]
@@ -76,7 +80,7 @@ namespace PnP.PowerShell.Commands.ClientSidePages
             }
             catch { }
 
-            if(pageExists)
+            if (pageExists)
             {
                 throw new Exception($"Page {name} already exists");
             }
@@ -97,32 +101,13 @@ namespace PnP.PowerShell.Commands.ClientSidePages
                 clientSidePage.Save(name);
             }
 
-            if (ParameterSpecified(nameof(ContentType)))
+            if (ContentType != null)
             {
-                ContentType ct = null;
-                if (ContentType.ContentType == null)
-                {
-                    if (ContentType.Id != null)
-                    {
-                        ct = SelectedWeb.GetContentTypeById(ContentType.Id, true);
-                    }
-                    else if (ContentType.Name != null)
-                    {
-                        ct = SelectedWeb.GetContentTypeByName(ContentType.Name, true);
-                    }
-                }
-                else
-                {
-                    ct = ContentType.ContentType;
-                }
-                if (ct != null)
-                {
-                    ct.EnsureProperty(w => w.StringId);
+                string ctId = ContentType.GetIdOrThrow(nameof(ContentType), SelectedWeb);
 
-                    clientSidePage.PageListItem["ContentTypeId"] = ct.StringId;
-                    clientSidePage.PageListItem.SystemUpdate();
-                    ClientContext.ExecuteQueryRetry();
-                }
+                clientSidePage.PageListItem["ContentTypeId"] = ctId;
+                clientSidePage.PageListItem.SystemUpdate();
+                ClientContext.ExecuteQueryRetry();
             }
 
             // If a specific promote type is specified, promote the page as Home or Article or ...

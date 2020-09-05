@@ -67,6 +67,7 @@ namespace PnP.PowerShell.Commands.ClientSidePages
         public ClientSidePageHeaderType HeaderType;
 
         [Parameter(Mandatory = false, HelpMessage = "Specify either the name, ID or an actual content type.")]
+        [ValidateNotNullOrEmpty]
         public ContentTypePipeBind ContentType;
 
         [Parameter(Mandatory = false, HelpMessage = "Thumbnail Url")]
@@ -90,7 +91,6 @@ namespace PnP.PowerShell.Commands.ClientSidePages
 
         protected override void ExecuteCmdlet()
         {
-
             ClientSidePage clientSidePage = Identity?.GetPage(ClientContext);
 
             if (clientSidePage == null)
@@ -109,7 +109,7 @@ namespace PnP.PowerShell.Commands.ClientSidePages
                 clientSidePage.PageTitle = Title;
             }
 
-            if(ThumbnailUrl != null)
+            if (ThumbnailUrl != null)
             {
                 clientSidePage.ThumbnailUrl = ThumbnailUrl;
             }
@@ -139,7 +139,8 @@ namespace PnP.PowerShell.Commands.ClientSidePages
             if (PromoteAs == ClientSidePagePromoteType.Template)
             {
                 clientSidePage.SaveAsTemplate(name);
-            } else
+            }
+            else
             {
                 clientSidePage.Save(name);
             }
@@ -170,29 +171,13 @@ namespace PnP.PowerShell.Commands.ClientSidePages
                 }
             }
 
-            if(ParameterSpecified(nameof(ContentType)))
+            if (ContentType != null)
             {
-                ContentType ct = null;
-                if (ContentType.ContentType == null)
-                {
-                    if (ContentType.Id != null)
-                    {
-                        ct = SelectedWeb.GetContentTypeById(ContentType.Id, true);
-                    }
-                    else if (ContentType.Name != null)
-                    {
-                        ct = SelectedWeb.GetContentTypeByName(ContentType.Name, true);
-                    }
-                }
-                else
-                {
-                    ct = ContentType.ContentType;
-                }
-                if (ct != null)
-                {
-                    ct.EnsureProperty(w => w.StringId);
+                string ctId = ContentType.GetIdOrWarn(this, SelectedWeb);
 
-                    clientSidePage.PageListItem["ContentTypeId"] = ct.StringId;
+                if (ctId != null)
+                {
+                    clientSidePage.PageListItem["ContentTypeId"] = ctId;
                     clientSidePage.PageListItem.SystemUpdate();
                     ClientContext.ExecuteQueryRetry();
                 }

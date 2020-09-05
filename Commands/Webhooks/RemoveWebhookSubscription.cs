@@ -1,9 +1,12 @@
 ﻿#if !ONPREMISES
 
 using Microsoft.SharePoint.Client;
+
 using OfficeDevPnP.Core.Entities;
+
 using PnP.PowerShell.CmdletHelpAttributes;
 using PnP.PowerShell.Commands.Base.PipeBinds;
+
 using System;
 using System.Management.Automation;
 
@@ -34,6 +37,7 @@ PS:> $subscriptions[0] | Remove-PnPWebhookSubscription -List MyList",
         public WebhookSubscriptionPipeBind Identity;
 
         [Parameter(Mandatory = false, HelpMessage = "The list object or name which the Webhook subscription will be removed from")]
+        [ValidateNotNullOrEmpty]
         public ListPipeBind List;
 
         [Parameter(Mandatory = false, HelpMessage = "Specifying the Force parameter will skip the confirmation question.")]
@@ -47,7 +51,7 @@ PS:> $subscriptions[0] | Remove-PnPWebhookSubscription -List MyList",
                 if (ParameterSpecified(nameof(List)))
                 {
                     // Get the list from the currently selected web
-                    List list = List.GetList(SelectedWeb);
+                    List list = List.GetListOrThrow(nameof(List), SelectedWeb);
                     if (list != null)
                     {
                         // Ensure we have list Id (and Title for the confirm message)
@@ -56,12 +60,11 @@ PS:> $subscriptions[0] | Remove-PnPWebhookSubscription -List MyList",
                         // Check the Force switch of ask confirm
                         if (Force
                             || ShouldContinue(string.Format(Properties.Resources.RemoveWebhookSubscription0From1_2,
-                                Identity.Id, Properties.Resources.List, List.Title), Properties.Resources.Confirm))
+                                Identity.Id, Properties.Resources.List, list.Title), Properties.Resources.Confirm))
                         {
                             // Remove the Webhook subscription for the specified Id
                             list.RemoveWebhookSubscription(Identity.Subscription);
                         }
-
                     }
                 }
                 else

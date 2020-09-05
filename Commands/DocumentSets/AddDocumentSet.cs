@@ -18,45 +18,36 @@ namespace PnP.PowerShell.Commands.DocumentSets
     public class AddDocumentSet : PnPWebCmdlet
     {
         [Parameter(Mandatory = true, HelpMessage = "The name of the list, its ID or an actual list object from where the document set needs to be added")]
+        [ValidateNotNullOrEmpty]
         public ListPipeBind List;
 
         [Parameter(Mandatory = true, HelpMessage = "The name of the document set")]
+        [ValidateNotNullOrEmpty]
         public string Name;
 
         [Parameter(Mandatory = true, HelpMessage = "The name of the content type, its ID or an actual content object referencing to the document set")]
+        [ValidateNotNullOrEmpty]
         public ContentTypePipeBind ContentType;
 
         protected override void ExecuteCmdlet()
         {
-            var list = List.GetList(SelectedWeb);
-            if (list == null)
-                throw new PSArgumentException($"No list found with id, title or url '{List}'", "List");
-            list.EnsureProperties(l => l.RootFolder, l => l.ContentTypes);
+            var list = List.GetListOrThrow(nameof(List), SelectedWeb,
+                l => l.RootFolder, l => l.ContentTypes);
 
-            // Try getting the content type from the Web
-            var contentType = ContentType.GetContentType(SelectedWeb);
+            var listContentType = ContentType.GetContentType(list);
+            if (listContentType is null)
+            {
+                var siteContentType = ContentType.GetContentTypeOrThrow(nameof(ContentType), SelectedWeb);
 
-            // If content type could not be found but a content type ID has been passed in, try looking for the content type ID on the list instead
-            if (contentType == null && !string.IsNullOrEmpty(ContentType.Id))
-            {
-                contentType = list.ContentTypes.FirstOrDefault(ct => ct.StringId.Equals(ContentType.Id));
-            }
-            else
-            {
-                // Content type has been found on the web, check if it also exists on the list
-                if (list.ContentTypes.All(ct => !ct.StringId.Equals(contentType.Id.StringValue, System.StringComparison.InvariantCultureIgnoreCase)))
-                {
-                    contentType = list.ContentTypes.FirstOrDefault(ct => ct.Name.Equals(ContentType.Name));
-                }
+                listContentType = new ContentTypePipeBind(siteContentType.Name)
+                    .GetContentTypeOrThrow(nameof(ContentType), list);
             }
 
-            if (contentType == null)
-            {
-                throw new PSArgumentException("The provided contenttype has not been found", "ContentType");
-            }
+            if (!listContentType.StringId.StartsWith("0x0120D520"))
+                throw new PSArgumentException($"Content type '{ContentType}' does not inherit from the base DocumentSet content type. DocumentSet content type IDs start with 0x0120D520.", nameof(ContentType));
 
             // Create the document set
-            var result = DocumentSet.Create(ClientContext, list.RootFolder, Name, contentType.Id);
+            var result = DocumentSet.Create(ClientContext, list.RootFolder, Name, listContentType.Id);
             ClientContext.ExecuteQueryRetry();
 
             WriteObject(result.Value);

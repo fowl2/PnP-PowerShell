@@ -51,18 +51,23 @@ namespace PnP.PowerShell.Commands.Files
         private const string ParameterSet_ASSTREAM = "Upload file from stream";
 
         [Parameter(Mandatory = true, ParameterSetName = ParameterSet_ASFILE, HelpMessage = "The local file path")]
+        [ValidateNotNullOrEmpty]
         public string Path = string.Empty;
 
         [Parameter(Mandatory = true, HelpMessage = "The destination folder in the site")]
+        [ValidateNotNullOrEmpty]
         public string Folder = string.Empty;
 
         [Parameter(Mandatory = true, ParameterSetName = ParameterSet_ASSTREAM, HelpMessage = "Name for file")]
+        [ValidateNotNullOrEmpty]
         public string FileName = string.Empty;
 
         [Parameter(Mandatory = false, ParameterSetName = ParameterSet_ASFILE, HelpMessage = "Filename to give the file on SharePoint")]
+        [ValidateNotNullOrEmpty]
         public string NewFileName = string.Empty;
 
         [Parameter(Mandatory = true, ParameterSetName = ParameterSet_ASSTREAM, HelpMessage = "Stream with the file contents")]
+        [ValidateNotNullOrEmpty]
         public Stream Stream;
 
         [Parameter(Mandatory = false, HelpMessage = "If versioning is enabled, this will check out the file first if it exists, upload the file, then check it in again")]
@@ -106,9 +111,11 @@ namespace PnP.PowerShell.Commands.Files
              "\n\nManaged Metadata (multiple values with paths to terms): -Values @{\"MetadataField\" = \"CORPORATE|DEPARTMENTS|FINANCE\",\"CORPORATE|DEPARTMENTS|HR\"}" +
              "\n\nManaged Metadata (multiple values with ids of terms): -Values @{\"MetadataField\" = \"fe40a95b-2144-4fa2-b82a-0b3d0299d818\",\"52d88107-c2a8-4bf0-adfa-04bc2305b593\"}" +
              "\n\nHyperlink or Picture: -Values @{\"Hyperlink\" = \"https://github.com/OfficeDev/, OfficePnp\"}")]
+        [ValidateNotNull]
         public Hashtable Values;
 
         [Parameter(Mandatory = false, HelpMessage = "Use to assign a ContentType to the file")]
+        [ValidateNotNullOrEmpty]
         public ContentTypePipeBind ContentType;
 
         protected override void ExecuteCmdlet()
@@ -132,35 +139,15 @@ namespace PnP.PowerShell.Commands.Files
             var folder = EnsureFolder();
             var fileUrl = UrlUtility.Combine(folder.ServerRelativeUrl, FileName);
 
-            ContentType targetContentType = null;
+            string targetContentTypeId = null;
             // Check to see if the Content Type exists. If it doesn't we are going to throw an exception and block this transaction right here.
             if (ContentType != null)
             {
-                try
-                {
-                    var list = SelectedWeb.GetListByUrl(Folder);
-
-                    if (!string.IsNullOrEmpty(ContentType.Id))
-                    {
-                        targetContentType = list.GetContentTypeById(ContentType.Id);
-                    }
-                    else if (!string.IsNullOrEmpty(ContentType.Name))
-                    {
-                        targetContentType = list.GetContentTypeByName(ContentType.Name);
-                    }
-                    else if (ContentType.ContentType != null)
-                    {
-                        targetContentType = ContentType.ContentType;
-                    }
-                    if (targetContentType == null)
-                    {
-                        ThrowTerminatingError(new ErrorRecord(new ArgumentException($"Content Type Argument: {ContentType} does not exist in the list: {list.Title}"), "CONTENTTYPEDOESNOTEXIST", ErrorCategory.InvalidArgument, this));
-                    }
-                }
-                catch
-                {
+                var list = SelectedWeb.GetListByUrl(Folder);
+                if (list is null)
                     ThrowTerminatingError(new ErrorRecord(new ArgumentException($"The Folder specified ({folder.ServerRelativeUrl}) does not have a corresponding List, the -ContentType parameter is not valid."), "RELATIVEPATHNOTINLIBRARY", ErrorCategory.InvalidArgument, this));
-                }
+
+                targetContentTypeId = ContentType?.GetIdOrThrow(nameof(ContentType), list);
             }
 
             // Check if the file exists
@@ -211,7 +198,7 @@ namespace PnP.PowerShell.Commands.Files
             if (ContentType != null)
             {
                 var item = file.ListItemAllFields;
-                item["ContentTypeId"] = targetContentType.Id.StringValue;
+                item["ContentTypeId"] = targetContentTypeId;
 #if !ONPREMISES
                 item.UpdateOverwriteVersion();
 #else

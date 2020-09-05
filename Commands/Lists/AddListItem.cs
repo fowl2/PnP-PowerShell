@@ -3,7 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Management.Automation;
+
 using Microsoft.SharePoint.Client;
+
 using PnP.PowerShell.CmdletHelpAttributes;
 using PnP.PowerShell.Commands.Base.PipeBinds;
 using PnP.PowerShell.Commands.Enums;
@@ -42,9 +44,11 @@ namespace PnP.PowerShell.Commands.Lists
     public class AddListItem : PnPWebCmdlet
     {
         [Parameter(Mandatory = true, ValueFromPipeline = true, Position = 0, HelpMessage = "The ID, Title or Url of the list.")]
+        [ValidateNotNullOrEmpty]
         public ListPipeBind List;
 
         [Parameter(Mandatory = false, HelpMessage = "Specify either the name, ID or an actual content type.")]
+        [ValidateNotNullOrEmpty]
         public ContentTypePipeBind ContentType;
 
         [Parameter(Mandatory = false, HelpMessage = "Use the internal names of the fields when specifying field names." +
@@ -100,27 +104,10 @@ namespace PnP.PowerShell.Commands.Lists
 
                 if (ContentType != null)
                 {
-                    ContentType ct = null;
-                    if (ContentType.ContentType == null)
+                    var ctId = ContentType.GetIdOrWarn(this, list);
+                    if (ctId != null)
                     {
-                        if (ContentType.Id != null)
-                        {
-                            ct = SelectedWeb.GetContentTypeById(ContentType.Id, true);
-                        }
-                        else if (ContentType.Name != null)
-                        {
-                            ct = SelectedWeb.GetContentTypeByName(ContentType.Name, true);
-                        }
-                    }
-                    else
-                    {
-                        ct = ContentType.ContentType;
-                    }
-                    if (ct != null)
-                    {
-                        ct.EnsureProperty(w => w.StringId);
-
-                        item["ContentTypeId"] = ct.StringId;
+                        item["ContentTypeId"] = ctId;
                         item.Update();
                         ClientContext.ExecuteQueryRetry();
                     }

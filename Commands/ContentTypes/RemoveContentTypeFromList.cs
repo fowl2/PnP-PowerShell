@@ -1,5 +1,7 @@
 ﻿using System.Management.Automation;
+
 using Microsoft.SharePoint.Client;
+
 using PnP.PowerShell.CmdletHelpAttributes;
 using PnP.PowerShell.Commands.Base.PipeBinds;
 
@@ -7,7 +9,7 @@ namespace PnP.PowerShell.Commands.ContentTypes
 {
 
     [Cmdlet(VerbsCommon.Remove, "PnPContentTypeFromList")]
-    [CmdletHelp("Removes a content type from a list", 
+    [CmdletHelp("Removes a content type from a list",
         Category = CmdletHelpCategory.ContentTypes)]
     [CmdletExample(
         Code = @"PS:> Remove-PnPContentTypeFromList -List ""Documents"" -ContentType ""Project Document""",
@@ -16,36 +18,21 @@ namespace PnP.PowerShell.Commands.ContentTypes
     public class RemoveContentTypeFromList : PnPWebCmdlet
     {
         [Parameter(Mandatory = true, HelpMessage = "The name of the list, its ID or an actual list object from where the content type needs to be removed from")]
+        [ValidateNotNullOrEmpty]
         public ListPipeBind List;
 
         [Parameter(Mandatory = true, HelpMessage = "The name of a content type, its ID or an actual content type object that needs to be removed from the specified list.")]
+        [ValidateNotNullOrEmpty]
         public ContentTypePipeBind ContentType;
 
         protected override void ExecuteCmdlet()
         {
-            ContentType ct = null;
-            List list = List.GetList(SelectedWeb);
-
-            if (ContentType.ContentType == null)
-            {
-                if (ContentType.Id != null)
-                {
-                    ct = SelectedWeb.GetContentTypeById(ContentType.Id,true);
-                }
-                else if (ContentType.Name != null)
-                {
-                    ct = SelectedWeb.GetContentTypeByName(ContentType.Name,true);
-                }
-            }
-            else
-            {
-                ct = ContentType.ContentType;
-            }
+            var list = List.GetListOrThrow(nameof(List), SelectedWeb);
+            var ct = ContentType.GetContentTypeOrWarn(this, list);
             if (ct != null)
             {
                 SelectedWeb.RemoveContentTypeFromList(list, ct);
             }
         }
-
     }
 }
