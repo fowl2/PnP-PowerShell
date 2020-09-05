@@ -3,8 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Management.Automation;
+
 using Microsoft.SharePoint.Client;
-using Microsoft.SharePoint.Client.Taxonomy;
+
 using PnP.PowerShell.CmdletHelpAttributes;
 using PnP.PowerShell.Commands.Base.PipeBinds;
 using PnP.PowerShell.Commands.Enums;
@@ -77,82 +78,29 @@ namespace PnP.PowerShell.Commands.Lists
 
         protected override void ExecuteCmdlet()
         {
-            List list = null;
-            if (List != null)
-            {
-                list = List.GetList(SelectedWeb);
-            }
+            var list = List.GetList(SelectedWeb);
+            // XXX: at least a warning if the list doesn't exist?
             if (list != null)
             {
                 var item = Identity.GetListItem(list);
 
+                bool updateRequired = false;
                 if (ContentType != null)
                 {
-                    ContentType ct = null;
-                    if (ContentType.ContentType == null)
+                    // XXX: should this be getting a list content type instead of a site one?
+                    var ct = ContentType.GetContentType(SelectedWeb);
+                    if (ct != null) // XXX: warning if CT doesn't exist?
                     {
-                        if (ContentType.Id != null)
-                        {
-                            ct = SelectedWeb.GetContentTypeById(ContentType.Id, true);
-                        }
-                        else if (ContentType.Name != null)
-                        {
-                            ct = SelectedWeb.GetContentTypeByName(ContentType.Name, true);
-                        }
-                    }
-                    else
-                    {
-                        ct = ContentType.ContentType;
-                    }
-                    if (ct != null)
-                    {
-                        ct.EnsureProperty(w => w.StringId);
-                        item["ContentTypeId"] = ct.StringId;
-#if !ONPREMISES
-                        if (SystemUpdate.IsPresent)
-                        {
-                            item.SystemUpdate();
-                        }
-                        else
-                        {
-                            item.Update();
-                        }
-#else
-                        item.Update();
-                        
-#endif                        
-                        ClientContext.ExecuteQueryRetry();
+                        item["ContentTypeId"] = ct.EnsureProperty(w => w.StringId);
+                        updateRequired = true;
                     }
                 }
                 if (Values != null)
                 {
-#if !ONPREMISES
-                    var updateType = ListItemUpdateType.Update;
-                    if (SystemUpdate.IsPresent)
-                    {
-                        updateType = ListItemUpdateType.SystemUpdate;
-                    }
-                    item = ListItemHelper.UpdateListItem(item, Values, updateType, (warning) =>
-                      {
-                          WriteWarning(warning);
-                      },
-                      (terminatingErrorMessage, terminatingErrorCode) =>
-                      {
-                          ThrowTerminatingError(new ErrorRecord(new Exception(terminatingErrorMessage), terminatingErrorCode, ErrorCategory.InvalidData, this));
-                      }
-                      );
-#else
-                    item = ListItemHelper.UpdateListItem(item, Values, ListItemUpdateType.Update, (warning) =>
-                      {
-                          WriteWarning(warning);
-                      },
-                      (terminatingErrorMessage,terminatingErrorCode) =>
-                      {
-                          ThrowTerminatingError(new ErrorRecord(new Exception(terminatingErrorMessage), terminatingErrorCode, ErrorCategory.InvalidData, this));
-                      }
-                      );
-#endif
+                    ListItemHelper.SetFieldValues(item, Values, this);
+                    updateRequired = true;
                 }
+
 #if !ONPREMISES
                 if (!String.IsNullOrEmpty(Label))
                 {
@@ -161,7 +109,7 @@ namespace PnP.PowerShell.Commands.Lists
 
                     var tag = tags.Where(t => t.TagName == Label).FirstOrDefault();
 
-                    if(tag != null)
+                    if (tag != null)
                     {
                         try
                         {
@@ -172,12 +120,28 @@ namespace PnP.PowerShell.Commands.Lists
                         {
                             WriteWarning(error.Message.ToString());
                         }
-                    } else
+                    }
+                    else
                     {
                         WriteWarning("Can not find compliance tag with value: " + Label);
                     }
                 }
 #endif
+
+                if (updateRequired)
+                {
+                    var updateType = ListItemUpdateType.Update;
+#if !ONPREMISES
+                    if (SystemUpdate.IsPresent)
+                    {
+                        updateType = ListItemUpdateType.SystemUpdate;
+                    }
+#endif
+                    ListItemHelper.UpdateListItem(item, updateType);
+                }
+
+                ClientContext.ExecuteQuery();
+                ClientContext.Load(item);
                 WriteObject(item);
             }
         }

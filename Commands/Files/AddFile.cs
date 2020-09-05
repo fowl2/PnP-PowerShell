@@ -1,13 +1,15 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.IO;
 using System.Management.Automation;
+
 using Microsoft.SharePoint.Client;
+
 using OfficeDevPnP.Core.Utilities;
+
 using PnP.PowerShell.CmdletHelpAttributes;
 using PnP.PowerShell.Commands.Base.PipeBinds;
-using System;
 using PnP.PowerShell.Commands.Utilities;
-using PnP.PowerShell.Commands.Enums;
 
 namespace PnP.PowerShell.Commands.Files
 {
@@ -186,7 +188,6 @@ namespace PnP.PowerShell.Commands.Files
             Microsoft.SharePoint.Client.File file;
             if (ParameterSetName == ParameterSet_ASFILE)
             {
-
                 file = folder.UploadFile(FileName, Path, true);
             }
             else
@@ -194,41 +195,39 @@ namespace PnP.PowerShell.Commands.Files
                 file = folder.UploadFile(FileName, Stream, true);
             }
 
+            bool updateRequired = false;
+            var item = file.ListItemAllFields;
+
             if (Values != null)
             {
-                var item = file.ListItemAllFields;
-
-                ListItemHelper.UpdateListItem(item, Values, ListItemUpdateType.UpdateOverwriteVersion,
-                    (warning) =>
-                    {
-                        WriteWarning(warning);
-                    },
-                    (terminatingErrorMessage, terminatingErrorCode) =>
-                    {
-                        ThrowTerminatingError(new ErrorRecord(new Exception(terminatingErrorMessage), terminatingErrorCode, ErrorCategory.InvalidData, this));
-                    });
+                ListItemHelper.SetFieldValues(item, Values, this);
+                updateRequired = true;
             }
+
             if (ContentType != null)
             {
-                var item = file.ListItemAllFields;
                 item["ContentTypeId"] = targetContentType.Id.StringValue;
+                updateRequired = true;
+            }
+
+            if (updateRequired)
+            {
 #if !ONPREMISES
-                item.UpdateOverwriteVersion();
+                item.SystemUpdate();
 #else
-                item.Update();
+                item.Update();  // XXX: this makes an extra version appear, is there an alternative?
 #endif
-                ClientContext.ExecuteQueryRetry();
             }
 
             if (Checkout)
                 SelectedWeb.CheckInFile(fileUrl, CheckinType.MajorCheckIn, CheckInComment);
-
 
             if (Publish)
                 SelectedWeb.PublishFile(fileUrl, PublishComment);
 
             if (Approve)
                 SelectedWeb.ApproveFile(fileUrl, ApproveComment);
+
             ClientContext.Load(file);
             ClientContext.ExecuteQueryRetry();
             WriteObject(file);

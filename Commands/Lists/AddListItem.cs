@@ -3,7 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Management.Automation;
+
 using Microsoft.SharePoint.Client;
+
 using PnP.PowerShell.CmdletHelpAttributes;
 using PnP.PowerShell.Commands.Base.PipeBinds;
 using PnP.PowerShell.Commands.Enums;
@@ -100,43 +102,17 @@ namespace PnP.PowerShell.Commands.Lists
 
                 if (ContentType != null)
                 {
-                    ContentType ct = null;
-                    if (ContentType.ContentType == null)
-                    {
-                        if (ContentType.Id != null)
-                        {
-                            ct = SelectedWeb.GetContentTypeById(ContentType.Id, true);
-                        }
-                        else if (ContentType.Name != null)
-                        {
-                            ct = SelectedWeb.GetContentTypeByName(ContentType.Name, true);
-                        }
-                    }
-                    else
-                    {
-                        ct = ContentType.ContentType;
-                    }
+                    // XXX: should this be getting a list content type instead of a site one?
+                    var ct = ContentType.GetContentType(SelectedWeb);
                     if (ct != null)
                     {
-                        ct.EnsureProperty(w => w.StringId);
-
-                        item["ContentTypeId"] = ct.StringId;
-                        item.Update();
-                        ClientContext.ExecuteQueryRetry();
+                        item["ContentTypeId"] = ct.EnsureProperty(w => w.StringId);
                     }
                 }
 
-                if (Values != null)
+                if (Values?.Count > 0)
                 {
-                    item = ListItemHelper.UpdateListItem(item, Values, ListItemUpdateType.Update,
-                        (warning) =>
-                        {
-                            WriteWarning(warning);
-                        },
-                        (terminatingErrorMessage, terminatingErrorCode) =>
-                        {
-                            ThrowTerminatingError(new ErrorRecord(new Exception(terminatingErrorMessage), terminatingErrorCode, ErrorCategory.InvalidData, this));
-                        });
+                    ListItemHelper.SetFieldValues(item, Values, this);
                 }
 
 #if !ONPREMISES
